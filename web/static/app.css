@@ -1,0 +1,66 @@
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, sans-serif;
+}
+
+body {
+  margin: 0 auto;
+  max-width: 60rem;
+  padding: 1rem;
+}
+
+[x-cloak] {
+  display: none !important;
+}
+
+.site-header {
+  align-items: center;
+  border-bottom: 1px solid #8884;
+  display: flex;
+  justify-content: space-between;
+  padding-block: 0.5rem;
+}
+
+.site-name {
+  font-weight: 600;
+}
+
+.principal {
+  position: relative;
+}
+
+.principal-details {
+  background: Canvas;
+  border: 1px solid #8886;
+  border-radius: 0.25rem;
+  margin: 0;
+  padding: 0.75rem;
+  position: absolute;
+  right: 0;
+}
+
+.principal-details dt {
+  font-weight: 600;
+}
+
+.principal-details dd {
+  margin: 0 0 0.5rem;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th,
+td {
+  border-bottom: 1px solid #8884;
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+}
+
+form {
+  align-items: center;
+  display: flex;
+  gap: 0.5rem;
+}

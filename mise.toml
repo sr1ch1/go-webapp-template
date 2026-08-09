@@ -1,0 +1,48 @@
+[tools]
+# Tool versions are intentionally left at "latest": this is a template, and
+# pinning would force frequent template updates to track security patches.
+# Only Python is pinned (to 3.14) because the mise task scripts depend on a
+# compatible Python version.
+go = "latest"
+golangci-lint = "latest"
+"go:golang.org/x/vuln/cmd/govulncheck" = "latest"
+node = "latest"
+air = "latest"
+zig = "latest"
+python = "3.14"
+
+[tasks.check]
+description = "Format check, lint, vet, vulncheck, and test with the race detector"
+run = "python scripts/check.py"
+
+[tasks.test]
+description = "Run the Go test suite with the race detector"
+run = "python scripts/test.py"
+
+[tasks.check-vuln]
+description = "Scan Go dependencies and code for known vulnerabilities"
+run = "python scripts/check_vuln.py"
+
+[tasks.check-fuzz]
+description = "Run fuzz targets with a bounded time budget"
+run = "python scripts/check_fuzz.py"
+
+[tasks.vendor-frontend]
+description = "Download pinned frontend assets and verify SHA-256 checksums"
+run = "python scripts/vendor_frontend.py"
+
+[tasks.dev]
+description = "Run the app with live reload via air"
+run = "python scripts/dev.py"
+
+[tasks.build]
+description = "Build the app binary for the current platform (cgo; needs clang/gcc, or zig via mise)"
+run = "python scripts/build.py"
+
+[tasks.e2e-setup]
+description = "Install Playwright browser dependencies"
+run = "python scripts/e2e_setup.py"
+
+[tasks.e2e]
+description = "Run browser-based end-to-end tests"
+run = "python scripts/e2e.py"

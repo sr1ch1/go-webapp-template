@@ -1,0 +1,36 @@
+# Local SQLite databases
+*.db
+*.db-shm
+*.db-wal
+/app.db*
+
+# Go noise
+/app
+/bin/
+*.test
+*.out
+coverage.*
+
+# Air live-reload build artifacts
+tmp/
+build-errors.log
+
+# Editor/OS
+.idea/
+.vscode/
+.DS_Store
+
+# Playwright e2e artifacts
+e2e/node_modules/
+e2e/test-results/
+e2e/playwright-report/
+e2e/playwright/.cache/
+e2e/.e2e-state.json
+e2e/webapp-e2e
+
+# Python task script cache
+scripts/__pycache__/
+*.pyc
+
+# Local environment files
+.env
