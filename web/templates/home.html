@@ -1,0 +1,60 @@
+{{define "home"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{.SiteName}}</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <script src="/static/vendor/htmx.min.js" defer integrity="sha384-H5SrcfygHmAuTDZphMHqBJLc3FhssKjG7w/CeCpFReSfwBWDTKpkzPP8c+cLsK+V" crossorigin="anonymous"></script>
+  <script src="/static/vendor/alpine-csp.min.js" defer integrity="sha384-MKLWq9B+VC0W3U8kDIBEsSu8uCnQ1B0UQpRaB+F7uR5ocXFbymMUKuLRntu5LLdu" crossorigin="anonymous"></script>
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <span class="site-name">{{.SiteName}}</span>
+    <div class="principal" x-data="dropdown">
+      <button type="button" class="principal-toggle" @click="toggle()">
+        {{.Principal.DisplayName}}
+      </button>
+      <dl class="principal-details" x-show="open" x-cloak>
+        <dt>Subject</dt><dd>{{.Principal.Subject}}</dd>
+        <dt>Email</dt><dd>{{.Principal.Email}}</dd>
+        <dt>Roles</dt><dd>{{range .Principal.Roles}}<code>{{.}}</code> {{end}}</dd>
+      </dl>
+    </div>
+  </header>
+  <main>
+    {{template "config-section" .}}
+  </main>
+</body>
+</html>
+{{end}}
+
+{{define "config-section"}}
+<section id="config-section">
+  <h2>Runtime Configuration</h2>
+  <table>
+    <thead>
+      <tr><th>Key</th><th>Value</th></tr>
+    </thead>
+    <tbody>
+      {{range .Entries}}
+      <tr>
+        <td><code>{{.Key}}</code></td>
+        {{if $.IsAdmin}}
+        <td>
+          <form hx-put="/ui/config/{{.Key}}" hx-target="#config-section" hx-swap="outerHTML">
+            <input type="text" name="value" value="{{.Value}}">
+            <button type="submit">Save</button>
+          </form>
+        </td>
+        {{else}}
+        <td>{{.Value}}</td>
+        {{end}}
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+</section>
+{{end}}

@@ -1,0 +1,16 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+entrypoint = "./tmp/main"
+cmd = "go build -o ./tmp/main ./cmd/app"
+delay = 1000
+exclude_dir = ["assets", "tmp", "vendor", "web/node_modules", ".git", ".idea"]
+exclude_regex = ["_test.go"]
+include_ext = ["go", "tpl", "tmpl", "html"]
+kill_delay = "0.5s"
+log = "build-errors.log"
+stop_on_error = true
+
+[misc]
+clean_on_exit = true

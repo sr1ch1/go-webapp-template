@@ -1,0 +1,21 @@
+version: 2
+
+# Dependency freshness. govulncheck (mise run check, also run weekly in CI)
+# covers vulnerability scanning; Dependabot covers "your pins are behind".
+# The vendored htmx/Alpine assets in web/static/vendor/ are not visible to
+# Dependabot — refresh them manually with `mise run vendor-frontend`.
+updates:
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: npm
+    directory: /e2e
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

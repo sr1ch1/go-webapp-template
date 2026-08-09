@@ -1,0 +1,23 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  default: standard
+  enable:
+    # gosec catches security anti-patterns (insecure crypto, weak randomness,
+    # unchecked integer overflows, etc.).
+    - gosec
+    # staticcheck finds correctness, performance, and subtle bug patterns
+    # beyond what go vet covers.
+    - staticcheck
+  settings:
+    errcheck:
+      # Common stdlib cleanup patterns where the returned error is rarely
+      # actionable and idiomatic Go code routinely ignores it.
+      exclude-functions:
+        # Idiomatic stdlib cleanup where callers almost never inspect the error.
+        - (io.ReadCloser).Close
+        - (*net/http.Server).Close
+        - (*net/http/httptest.Server).Close

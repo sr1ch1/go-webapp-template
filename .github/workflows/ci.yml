@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  # Weekly so govulncheck (via `mise run check`) reports newly published
+  # vulnerabilities even when the code has not changed.
+  schedule:
+    - cron: "13 7 * * 1" # Mondays 07:13 UTC
+
+jobs:
+  check:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install mise
+        uses: jdx/mise-action@v2
+
+      - name: Build
+        run: mise run build
+
+      - name: Run checks
+        run: mise run check
+
+      - name: Verify vendored frontend assets
+        shell: bash
+        run: |
+          mise run vendor-frontend
+          git diff --exit-code web/static/vendor/
