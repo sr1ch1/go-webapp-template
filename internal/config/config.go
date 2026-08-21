@@ -15,23 +15,40 @@ import (
 // Config holds the application's runtime settings, sourced exclusively from
 // environment variables.
 type Config struct {
-	HTTPAddr           string
-	ReadHeaderTimeout  time.Duration
-	ReadTimeout        time.Duration
-	WriteTimeout       time.Duration
-	IdleTimeout        time.Duration
-	ShutdownTimeout    time.Duration
-	DisableHSTS        bool
-	AuthProvider       string
-	CloudflareTeam     string // team domain, e.g. "example" in example.cloudflareaccess.com
-	CloudflareAudience string
-	TestIssuer         string
-	TestAudience       string
-	TestJWKSURL        string
-	TestHeader         string
-	TestAlgorithm      string
-	DatabasePath       string
-	LogLevel           string
+	HTTPAddr          string
+	ReadHeaderTimeout time.Duration
+	ReadTimeout       time.Duration
+	WriteTimeout      time.Duration
+	IdleTimeout       time.Duration
+	ShutdownTimeout   time.Duration
+	DisableHSTS       bool
+	Auth              AuthConfig
+	DatabasePath      string
+	LogLevel          string
+}
+
+// AuthConfig selects the Identity Provider and groups each provider's
+// settings under its own name.
+type AuthConfig struct {
+	Provider   string
+	Cloudflare CloudflareConfig
+	Local      LocalConfig
+}
+
+// CloudflareConfig holds the settings for the cloudflare-access provider.
+type CloudflareConfig struct {
+	TeamDomain string // team domain, e.g. "example" in example.cloudflareaccess.com
+	Audience   string
+}
+
+// LocalConfig holds the settings for the local provider (local development
+// and end-to-end tests against a local JWKS server).
+type LocalConfig struct {
+	Issuer    string
+	Audience  string
+	JWKSURL   string
+	Header    string
+	Algorithm string
 }
 
 // Load reads configuration from the environment, applying defaults and
@@ -40,18 +57,24 @@ func Load() (Config, error) {
 	var problems []string
 
 	cfg := Config{
-		HTTPAddr:           envString("APP_HTTP_ADDR", ":8080"),
-		DisableHSTS:        envBool("APP_HTTP_DISABLE_HSTS"),
-		AuthProvider:       envString("APP_AUTH_PROVIDER", "cloudflare-access"),
-		CloudflareTeam:     os.Getenv("APP_AUTH_CLOUDFLARE_TEAM_DOMAIN"),
-		CloudflareAudience: os.Getenv("APP_AUTH_CLOUDFLARE_AUDIENCE"),
-		TestIssuer:         os.Getenv("APP_AUTH_TEST_ISSUER"),
-		TestAudience:       os.Getenv("APP_AUTH_TEST_AUDIENCE"),
-		TestJWKSURL:        os.Getenv("APP_AUTH_TEST_JWKS_URL"),
-		TestHeader:         envString("APP_AUTH_TEST_HEADER", "Cf-Access-Jwt-Assertion"),
-		TestAlgorithm:      envString("APP_AUTH_TEST_ALGORITHM", "RS256"),
-		DatabasePath:       envString("APP_DATABASE_PATH", "app.db"),
-		LogLevel:           envString("APP_LOG_LEVEL", "info"),
+		HTTPAddr:    envString("APP_HTTP_ADDR", ":8080"),
+		DisableHSTS: envBool("APP_HTTP_DISABLE_HSTS"),
+		Auth: AuthConfig{
+			Provider: envString("APP_AUTH_PROVIDER", "cloudflare-access"),
+			Cloudflare: CloudflareConfig{
+				TeamDomain: os.Getenv("APP_AUTH_CLOUDFLARE_TEAM_DOMAIN"),
+				Audience:   os.Getenv("APP_AUTH_CLOUDFLARE_AUDIENCE"),
+			},
+			Local: LocalConfig{
+				Issuer:    os.Getenv("APP_AUTH_LOCAL_ISSUER"),
+				Audience:  os.Getenv("APP_AUTH_LOCAL_AUDIENCE"),
+				JWKSURL:   os.Getenv("APP_AUTH_LOCAL_JWKS_URL"),
+				Header:    envString("APP_AUTH_LOCAL_HEADER", "Cf-Access-Jwt-Assertion"),
+				Algorithm: envString("APP_AUTH_LOCAL_ALGORITHM", "RS256"),
+			},
+		},
+		DatabasePath: envString("APP_DATABASE_PATH", "app.db"),
+		LogLevel:     envString("APP_LOG_LEVEL", "info"),
 	}
 
 	var err error
@@ -78,24 +101,24 @@ func Load() (Config, error) {
 		problems = append(problems, err.Error())
 	}
 
-	if cfg.AuthProvider == "cloudflare-access" {
-		if cfg.CloudflareTeam == "" {
+	if cfg.Auth.Provider == "cloudflare-access" {
+		if cfg.Auth.Cloudflare.TeamDomain == "" {
 			problems = append(problems, "APP_AUTH_CLOUDFLARE_TEAM_DOMAIN is required when APP_AUTH_PROVIDER=cloudflare-access")
 		}
-		if cfg.CloudflareAudience == "" {
+		if cfg.Auth.Cloudflare.Audience == "" {
 			problems = append(problems, "APP_AUTH_CLOUDFLARE_AUDIENCE is required when APP_AUTH_PROVIDER=cloudflare-access")
 		}
 	}
 
-	if cfg.AuthProvider == "test" {
-		if cfg.TestIssuer == "" {
-			problems = append(problems, "APP_AUTH_TEST_ISSUER is required when APP_AUTH_PROVIDER=test")
+	if cfg.Auth.Provider == "local" {
+		if cfg.Auth.Local.Issuer == "" {
+			problems = append(problems, "APP_AUTH_LOCAL_ISSUER is required when APP_AUTH_PROVIDER=local")
 		}
-		if cfg.TestAudience == "" {
-			problems = append(problems, "APP_AUTH_TEST_AUDIENCE is required when APP_AUTH_PROVIDER=test")
+		if cfg.Auth.Local.Audience == "" {
+			problems = append(problems, "APP_AUTH_LOCAL_AUDIENCE is required when APP_AUTH_PROVIDER=local")
 		}
-		if cfg.TestJWKSURL == "" {
-			problems = append(problems, "APP_AUTH_TEST_JWKS_URL is required when APP_AUTH_PROVIDER=test")
+		if cfg.Auth.Local.JWKSURL == "" {
+			problems = append(problems, "APP_AUTH_LOCAL_JWKS_URL is required when APP_AUTH_PROVIDER=local")
 		}
 	}
 

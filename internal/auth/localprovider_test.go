@@ -14,17 +14,17 @@ import (
 	"time"
 )
 
-func TestNewProviderTest(t *testing.T) {
+func TestNewProviderLocal(t *testing.T) {
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		t.Fatalf("generating key: %v", err)
 	}
 	jwks := newJWKSServer(t, rsaJWK("test-key", &key.PublicKey))
 
-	p, err := NewProvider("test", Settings{
-		TestIssuer:   "https://test.example.com",
-		TestAudience: "test-audience",
-		JWKSURL:      jwks.URL,
+	p, err := NewProvider("local", Settings{
+		LocalIssuer:   "https://test.example.com",
+		LocalAudience: "test-audience",
+		JWKSURL:       jwks.URL,
 	})
 	if err != nil {
 		t.Fatalf("NewProvider: %v", err)
@@ -66,27 +66,27 @@ func TestNewProviderTest(t *testing.T) {
 	}
 }
 
-func TestNewProviderTestMissingSettings(t *testing.T) {
+func TestNewProviderLocalMissingSettings(t *testing.T) {
 	cases := []struct {
 		name     string
 		settings Settings
 	}{
 		{
 			name:     "missing issuer",
-			settings: Settings{TestAudience: "aud", JWKSURL: "http://localhost/jwks"},
+			settings: Settings{LocalAudience: "aud", JWKSURL: "http://localhost/jwks"},
 		},
 		{
 			name:     "missing audience",
-			settings: Settings{TestIssuer: "iss", JWKSURL: "http://localhost/jwks"},
+			settings: Settings{LocalIssuer: "iss", JWKSURL: "http://localhost/jwks"},
 		},
 		{
 			name:     "missing JWKS URL",
-			settings: Settings{TestIssuer: "iss", TestAudience: "aud"},
+			settings: Settings{LocalIssuer: "iss", LocalAudience: "aud"},
 		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := NewProvider("test", tc.settings)
+			_, err := NewProvider("local", tc.settings)
 			if err == nil {
 				t.Fatal("NewProvider succeeded, want error")
 			}
@@ -94,19 +94,19 @@ func TestNewProviderTestMissingSettings(t *testing.T) {
 	}
 }
 
-func TestNewProviderTestCustomHeaderAndAlgorithm(t *testing.T) {
+func TestNewProviderLocalCustomHeaderAndAlgorithm(t *testing.T) {
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		t.Fatalf("generating key: %v", err)
 	}
 	jwks := newJWKSServer(t, rsaJWK("test-key", &key.PublicKey))
 
-	p, err := NewProvider("test", Settings{
-		TestIssuer:    "https://test.example.com",
-		TestAudience:  "test-audience",
-		JWKSURL:       jwks.URL,
-		TestHeader:    "X-Test-Auth",
-		TestAlgorithm: AlgRS256,
+	p, err := NewProvider("local", Settings{
+		LocalIssuer:    "https://test.example.com",
+		LocalAudience:  "test-audience",
+		JWKSURL:        jwks.URL,
+		LocalHeader:    "X-Test-Auth",
+		LocalAlgorithm: AlgRS256,
 	})
 	if err != nil {
 		t.Fatalf("NewProvider: %v", err)

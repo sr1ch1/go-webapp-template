@@ -51,16 +51,16 @@ type registryEntry struct {
 type Settings struct {
 	TeamDomain string
 	Audience   string
-	// TestIssuer is used by the test provider as the expected token issuer.
-	TestIssuer string
-	// TestAudience is used by the test provider as the expected token audience.
-	TestAudience string
-	// JWKSURL is used by the test provider to point at a local JWKS server.
+	// LocalIssuer is used by the local provider as the expected token issuer.
+	LocalIssuer string
+	// LocalAudience is used by the local provider as the expected token audience.
+	LocalAudience string
+	// JWKSURL is used by the local provider to point at a local JWKS server.
 	JWKSURL string
-	// TestHeader is used by the test provider; defaults to Cf-Access-Jwt-Assertion.
-	TestHeader string
-	// TestAlgorithm is used by the test provider; defaults to RS256.
-	TestAlgorithm string
+	// LocalHeader is used by the local provider; defaults to Cf-Access-Jwt-Assertion.
+	LocalHeader string
+	// LocalAlgorithm is used by the local provider; defaults to RS256.
+	LocalAlgorithm string
 	// HTTPClient is used for outbound JWKS fetches. When nil, the provider
 	// uses a bounded stdlib client with a 10-second timeout.
 	HTTPClient *http.Client

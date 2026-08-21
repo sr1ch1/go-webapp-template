@@ -34,10 +34,10 @@ func TestRunStartsAndShutsDown(t *testing.T) {
 	prev := slog.Default()
 	t.Cleanup(func() { slog.SetDefault(prev) })
 
-	t.Setenv("APP_AUTH_PROVIDER", "test")
-	t.Setenv("APP_AUTH_TEST_ISSUER", "https://test.example.com")
-	t.Setenv("APP_AUTH_TEST_AUDIENCE", "test-aud")
-	t.Setenv("APP_AUTH_TEST_JWKS_URL", "http://localhost:9999/jwks")
+	t.Setenv("APP_AUTH_PROVIDER", "local")
+	t.Setenv("APP_AUTH_LOCAL_ISSUER", "https://test.example.com")
+	t.Setenv("APP_AUTH_LOCAL_AUDIENCE", "test-aud")
+	t.Setenv("APP_AUTH_LOCAL_JWKS_URL", "http://localhost:9999/jwks")
 	t.Setenv("APP_HTTP_ADDR", "127.0.0.1:0")
 	t.Setenv("APP_DATABASE_PATH", filepath.Join(t.TempDir(), "app.db"))
 	t.Setenv("APP_HTTP_DISABLE_HSTS", "1")
@@ -61,15 +61,15 @@ func TestRunStartsAndShutsDown(t *testing.T) {
 	}
 }
 
-// setValidTestEnv configures the environment for the test auth provider with
+// setValidTestEnv configures the environment for the local auth provider with
 // a throwaway database, so config.Load succeeds and run() can proceed past
 // the step under test.
 func setValidTestEnv(t *testing.T) {
 	t.Helper()
-	t.Setenv("APP_AUTH_PROVIDER", "test")
-	t.Setenv("APP_AUTH_TEST_ISSUER", "https://test.example.com")
-	t.Setenv("APP_AUTH_TEST_AUDIENCE", "test-aud")
-	t.Setenv("APP_AUTH_TEST_JWKS_URL", "http://localhost:9999/jwks")
+	t.Setenv("APP_AUTH_PROVIDER", "local")
+	t.Setenv("APP_AUTH_LOCAL_ISSUER", "https://test.example.com")
+	t.Setenv("APP_AUTH_LOCAL_AUDIENCE", "test-aud")
+	t.Setenv("APP_AUTH_LOCAL_JWKS_URL", "http://localhost:9999/jwks")
 	t.Setenv("APP_HTTP_ADDR", "127.0.0.1:0")
 	t.Setenv("APP_DATABASE_PATH", filepath.Join(t.TempDir(), "app.db"))
 	t.Setenv("APP_HTTP_DISABLE_HSTS", "1")

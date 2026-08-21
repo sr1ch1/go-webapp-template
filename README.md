@@ -161,22 +161,22 @@ stripping a prefix). The default is the identity function; pass your own
 `RoleMapper` to the provider constructor when the IdP's naming differs from
 the app's.
 
-## Test Identity Provider
+## Local Identity Provider
 
-A `test` provider is built in for browser-based end-to-end tests. It uses the
-same JWT verifier as production but points at a local JWKS server. Select it
-with:
+A `local` provider is built in for local development and browser-based
+end-to-end tests. It uses the same JWT verifier as production but points at a
+local JWKS server. Select it with:
 
 ```sh
-APP_AUTH_PROVIDER=test \
-APP_AUTH_TEST_ISSUER=https://test.example.com \
-APP_AUTH_TEST_AUDIENCE=test-audience \
-APP_AUTH_TEST_JWKS_URL=http://localhost:9999/jwks.json \
+APP_AUTH_PROVIDER=local \
+APP_AUTH_LOCAL_ISSUER=https://test.example.com \
+APP_AUTH_LOCAL_AUDIENCE=test-audience \
+APP_AUTH_LOCAL_JWKS_URL=http://localhost:9999/jwks.json \
 go run ./cmd/app
 ```
 
-Optional: `APP_AUTH_TEST_HEADER` (default `Cf-Access-Jwt-Assertion`) and
-`APP_AUTH_TEST_ALGORITHM` (default `RS256`).
+Optional: `APP_AUTH_LOCAL_HEADER` (default `Cf-Access-Jwt-Assertion`) and
+`APP_AUTH_LOCAL_ALGORITHM` (default `RS256`).
 
 ## Browser end-to-end tests
 

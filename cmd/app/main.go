@@ -57,20 +57,20 @@ func run() (err error) {
 	}()
 
 	settings := auth.Settings{
-		TeamDomain:    cfg.CloudflareTeam,
-		Audience:      cfg.CloudflareAudience,
-		TestIssuer:    cfg.TestIssuer,
-		TestAudience:  cfg.TestAudience,
-		JWKSURL:       cfg.TestJWKSURL,
-		TestHeader:    cfg.TestHeader,
-		TestAlgorithm: cfg.TestAlgorithm,
+		TeamDomain:     cfg.Auth.Cloudflare.TeamDomain,
+		Audience:       cfg.Auth.Cloudflare.Audience,
+		LocalIssuer:    cfg.Auth.Local.Issuer,
+		LocalAudience:  cfg.Auth.Local.Audience,
+		JWKSURL:        cfg.Auth.Local.JWKSURL,
+		LocalHeader:    cfg.Auth.Local.Header,
+		LocalAlgorithm: cfg.Auth.Local.Algorithm,
 	}
-	provider, err := auth.NewProvider(cfg.AuthProvider, settings)
+	provider, err := auth.NewProvider(cfg.Auth.Provider, settings)
 	if err != nil {
 		return err
 	}
-	if cfg.AuthProvider == "test" {
-		log.Warn("test auth provider is enabled; do not use in production")
+	if cfg.Auth.Provider == "local" {
+		log.Warn("local auth provider is enabled; do not use in production")
 	}
 
 	routes, err := api.Routes(st, provider, ui.StaticHandler(), ui.NewPageModel(st), cfg.DisableHSTS, log)

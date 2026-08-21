@@ -18,8 +18,8 @@ func TestLoadDefaults(t *testing.T) {
 	if cfg.HTTPAddr != ":8080" {
 		t.Errorf("HTTPAddr = %q, want :8080", cfg.HTTPAddr)
 	}
-	if cfg.AuthProvider != "cloudflare-access" {
-		t.Errorf("AuthProvider = %q, want cloudflare-access", cfg.AuthProvider)
+	if cfg.Auth.Provider != "cloudflare-access" {
+		t.Errorf("Auth.Provider = %q, want cloudflare-access", cfg.Auth.Provider)
 	}
 	if cfg.DatabasePath != "app.db" {
 		t.Errorf("DatabasePath = %q, want app.db", cfg.DatabasePath)
@@ -65,11 +65,11 @@ func TestLoadCustomValues(t *testing.T) {
 	if cfg.HTTPAddr != ":9090" {
 		t.Errorf("HTTPAddr = %q, want :9090", cfg.HTTPAddr)
 	}
-	if cfg.CloudflareTeam != "myteam" {
-		t.Errorf("CloudflareTeam = %q, want myteam", cfg.CloudflareTeam)
+	if cfg.Auth.Cloudflare.TeamDomain != "myteam" {
+		t.Errorf("Auth.Cloudflare.TeamDomain = %q, want myteam", cfg.Auth.Cloudflare.TeamDomain)
 	}
-	if cfg.CloudflareAudience != "my-aud" {
-		t.Errorf("CloudflareAudience = %q, want my-aud", cfg.CloudflareAudience)
+	if cfg.Auth.Cloudflare.Audience != "my-aud" {
+		t.Errorf("Auth.Cloudflare.Audience = %q, want my-aud", cfg.Auth.Cloudflare.Audience)
 	}
 	if cfg.DatabasePath != "/tmp/app.db" {
 		t.Errorf("DatabasePath = %q, want /tmp/app.db", cfg.DatabasePath)
@@ -138,57 +138,57 @@ func TestLoadMissingCloudflareSettings(t *testing.T) {
 	}
 }
 
-func TestLoadTestProvider(t *testing.T) {
-	t.Setenv("APP_AUTH_PROVIDER", "test")
-	t.Setenv("APP_AUTH_TEST_ISSUER", "https://test.example.com")
-	t.Setenv("APP_AUTH_TEST_AUDIENCE", "test-aud")
-	t.Setenv("APP_AUTH_TEST_JWKS_URL", "http://localhost:9999/jwks")
-	t.Setenv("APP_AUTH_TEST_HEADER", "X-Test-Auth")
-	t.Setenv("APP_AUTH_TEST_ALGORITHM", "ES256")
+func TestLoadLocalProvider(t *testing.T) {
+	t.Setenv("APP_AUTH_PROVIDER", "local")
+	t.Setenv("APP_AUTH_LOCAL_ISSUER", "https://test.example.com")
+	t.Setenv("APP_AUTH_LOCAL_AUDIENCE", "test-aud")
+	t.Setenv("APP_AUTH_LOCAL_JWKS_URL", "http://localhost:9999/jwks")
+	t.Setenv("APP_AUTH_LOCAL_HEADER", "X-Test-Auth")
+	t.Setenv("APP_AUTH_LOCAL_ALGORITHM", "ES256")
 
 	cfg, err := Load()
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	if cfg.AuthProvider != "test" {
-		t.Errorf("AuthProvider = %q, want test", cfg.AuthProvider)
+	if cfg.Auth.Provider != "local" {
+		t.Errorf("Auth.Provider = %q, want local", cfg.Auth.Provider)
 	}
-	if cfg.TestIssuer != "https://test.example.com" {
-		t.Errorf("TestIssuer = %q, want https://test.example.com", cfg.TestIssuer)
+	if cfg.Auth.Local.Issuer != "https://test.example.com" {
+		t.Errorf("Auth.Local.Issuer = %q, want https://test.example.com", cfg.Auth.Local.Issuer)
 	}
-	if cfg.TestAudience != "test-aud" {
-		t.Errorf("TestAudience = %q, want test-aud", cfg.TestAudience)
+	if cfg.Auth.Local.Audience != "test-aud" {
+		t.Errorf("Auth.Local.Audience = %q, want test-aud", cfg.Auth.Local.Audience)
 	}
-	if cfg.TestJWKSURL != "http://localhost:9999/jwks" {
-		t.Errorf("TestJWKSURL = %q, want http://localhost:9999/jwks", cfg.TestJWKSURL)
+	if cfg.Auth.Local.JWKSURL != "http://localhost:9999/jwks" {
+		t.Errorf("Auth.Local.JWKSURL = %q, want http://localhost:9999/jwks", cfg.Auth.Local.JWKSURL)
 	}
-	if cfg.TestHeader != "X-Test-Auth" {
-		t.Errorf("TestHeader = %q, want X-Test-Auth", cfg.TestHeader)
+	if cfg.Auth.Local.Header != "X-Test-Auth" {
+		t.Errorf("Auth.Local.Header = %q, want X-Test-Auth", cfg.Auth.Local.Header)
 	}
-	if cfg.TestAlgorithm != "ES256" {
-		t.Errorf("TestAlgorithm = %q, want ES256", cfg.TestAlgorithm)
+	if cfg.Auth.Local.Algorithm != "ES256" {
+		t.Errorf("Auth.Local.Algorithm = %q, want ES256", cfg.Auth.Local.Algorithm)
 	}
 }
 
-func TestLoadTestProviderDefaults(t *testing.T) {
-	t.Setenv("APP_AUTH_PROVIDER", "test")
-	t.Setenv("APP_AUTH_TEST_ISSUER", "https://test.example.com")
-	t.Setenv("APP_AUTH_TEST_AUDIENCE", "test-aud")
-	t.Setenv("APP_AUTH_TEST_JWKS_URL", "http://localhost:9999/jwks")
+func TestLoadLocalProviderDefaults(t *testing.T) {
+	t.Setenv("APP_AUTH_PROVIDER", "local")
+	t.Setenv("APP_AUTH_LOCAL_ISSUER", "https://test.example.com")
+	t.Setenv("APP_AUTH_LOCAL_AUDIENCE", "test-aud")
+	t.Setenv("APP_AUTH_LOCAL_JWKS_URL", "http://localhost:9999/jwks")
 
 	cfg, err := Load()
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	if cfg.TestHeader != "Cf-Access-Jwt-Assertion" {
-		t.Errorf("TestHeader default = %q, want Cf-Access-Jwt-Assertion", cfg.TestHeader)
+	if cfg.Auth.Local.Header != "Cf-Access-Jwt-Assertion" {
+		t.Errorf("Auth.Local.Header default = %q, want Cf-Access-Jwt-Assertion", cfg.Auth.Local.Header)
 	}
-	if cfg.TestAlgorithm != "RS256" {
-		t.Errorf("TestAlgorithm default = %q, want RS256", cfg.TestAlgorithm)
+	if cfg.Auth.Local.Algorithm != "RS256" {
+		t.Errorf("Auth.Local.Algorithm default = %q, want RS256", cfg.Auth.Local.Algorithm)
 	}
 }
 
-func TestLoadTestProviderMissingSettings(t *testing.T) {
+func TestLoadLocalProviderMissingSettings(t *testing.T) {
 	for _, tc := range []struct {
 		name     string
 		issuer   string
@@ -200,34 +200,34 @@ func TestLoadTestProviderMissingSettings(t *testing.T) {
 			name:     "missing issuer",
 			audience: "aud",
 			jwksURL:  "http://localhost/jwks",
-			want:     "APP_AUTH_TEST_ISSUER",
+			want:     "APP_AUTH_LOCAL_ISSUER",
 		},
 		{
 			name:    "missing audience",
 			issuer:  "https://test.example.com",
 			jwksURL: "http://localhost/jwks",
-			want:    "APP_AUTH_TEST_AUDIENCE",
+			want:    "APP_AUTH_LOCAL_AUDIENCE",
 		},
 		{
 			name:     "missing JWKS URL",
 			issuer:   "https://test.example.com",
 			audience: "aud",
-			want:     "APP_AUTH_TEST_JWKS_URL",
+			want:     "APP_AUTH_LOCAL_JWKS_URL",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Setenv("APP_AUTH_PROVIDER", "test")
-			t.Setenv("APP_AUTH_TEST_ISSUER", "")
-			t.Setenv("APP_AUTH_TEST_AUDIENCE", "")
-			t.Setenv("APP_AUTH_TEST_JWKS_URL", "")
+			t.Setenv("APP_AUTH_PROVIDER", "local")
+			t.Setenv("APP_AUTH_LOCAL_ISSUER", "")
+			t.Setenv("APP_AUTH_LOCAL_AUDIENCE", "")
+			t.Setenv("APP_AUTH_LOCAL_JWKS_URL", "")
 			if tc.issuer != "" {
-				t.Setenv("APP_AUTH_TEST_ISSUER", tc.issuer)
+				t.Setenv("APP_AUTH_LOCAL_ISSUER", tc.issuer)
 			}
 			if tc.audience != "" {
-				t.Setenv("APP_AUTH_TEST_AUDIENCE", tc.audience)
+				t.Setenv("APP_AUTH_LOCAL_AUDIENCE", tc.audience)
 			}
 			if tc.jwksURL != "" {
-				t.Setenv("APP_AUTH_TEST_JWKS_URL", tc.jwksURL)
+				t.Setenv("APP_AUTH_LOCAL_JWKS_URL", tc.jwksURL)
 			}
 
 			_, err := Load()

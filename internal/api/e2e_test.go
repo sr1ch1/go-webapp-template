@@ -42,7 +42,7 @@ func signE2E(t *testing.T, key *rsa.PrivateKey, kid string, claims map[string]an
 	return input + "." + base64.RawURLEncoding.EncodeToString(sig)
 }
 
-// TestEndToEnd boots the real server on 127.0.0.1:0 with a test provider
+// TestEndToEnd boots the real server on 127.0.0.1:0 with a JWT provider
 // backed by an in-test JWKS and walks the main request paths.
 func TestEndToEnd(t *testing.T) {
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
