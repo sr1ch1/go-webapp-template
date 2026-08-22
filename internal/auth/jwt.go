@@ -297,6 +297,7 @@ type jwksClient struct {
 	keys             map[string]any // kid → *rsa.PublicKey or *ecdsa.PublicKey
 	fetchedAt        time.Time      // last successful fetch; drives the TTL
 	lastFetchAttempt time.Time      // last fetch attempt; throttles refetches
+	fetching         chan struct{}  // non-nil while a fetch is in flight; closed when it ends
 }
 
 func newJWKSClient(url string, httpClient *http.Client, nowFn func() time.Time) *jwksClient {
@@ -311,8 +312,10 @@ func newJWKSClient(url string, httpClient *http.Client, nowFn func() time.Time) 
 // key returns the public key for kid, refreshing the cache once if the key
 // is unknown or the cache is stale. Refetches are throttled to at most one
 // per jwksMinRefreshInterval; within the interval the cache answers as-is.
-// The network fetch runs without holding c.mu: a slow Identity Provider
-// stalls only the fetching goroutine, not every concurrent authentication.
+// Callers whose kid is unknown while a fetch is in flight wait for that fetch
+// instead of failing against an empty or stale cache. The network fetch runs
+// without holding c.mu: a slow Identity Provider stalls only the fetching
+// goroutine and its waiters, not every concurrent authentication.
 func (c *jwksClient) key(ctx context.Context, kid string) (any, error) {
 	now := c.nowFn()
 
@@ -324,6 +327,24 @@ func (c *jwksClient) key(ctx context.Context, kid string) (any, error) {
 	if now.Sub(c.lastFetchAttempt) < jwksMinRefreshInterval {
 		// Throttled: answer from the cache as-is, stale entries included.
 		key, ok := c.keys[kid]
+		fetching := c.fetching
+		c.mu.Unlock()
+		if ok {
+			return key, nil
+		}
+		if fetching == nil {
+			return nil, errors.New("unknown key id")
+		}
+		// A fetch is in flight — at startup this is the very first one and
+		// the cache is still empty. Wait for it rather than rejecting a
+		// legitimate token, then answer from the refreshed cache.
+		select {
+		case <-fetching:
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+		c.mu.Lock()
+		key, ok = c.keys[kid]
 		c.mu.Unlock()
 		if !ok {
 			return nil, errors.New("unknown key id")
@@ -331,12 +352,21 @@ func (c *jwksClient) key(ctx context.Context, kid string) (any, error) {
 		return key, nil
 	}
 	// Claim the fetch slot under the lock so at most one goroutine per
-	// throttle interval fetches; callers arriving during the fetch are
-	// answered from the (possibly stale) cache by the throttled branch.
+	// throttle interval fetches; callers arriving during the fetch either
+	// wait for it (unknown kid) or are answered from the (possibly stale)
+	// cache by the throttled branch.
 	c.lastFetchAttempt = now
+	c.fetching = make(chan struct{})
 	c.mu.Unlock()
 
-	if err := c.fetch(ctx); err != nil {
+	err := c.fetch(ctx)
+
+	c.mu.Lock()
+	close(c.fetching)
+	c.fetching = nil
+	c.mu.Unlock()
+
+	if err != nil {
 		// Fall back to a stale cached key rather than failing outright
 		// when the Identity Provider is briefly unreachable.
 		c.mu.Lock()

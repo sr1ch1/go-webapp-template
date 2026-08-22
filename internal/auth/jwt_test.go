@@ -479,18 +479,20 @@ func TestJWKSUnknownKidRefreshThrottled(t *testing.T) {
 	}
 }
 
-func TestJWKSFetchDoesNotBlockAuthentications(t *testing.T) {
+func TestJWKSUnknownKidWaitsForInFlightFetch(t *testing.T) {
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		t.Fatalf("generating key: %v", err)
 	}
 
 	// JWKS server that blocks until released, so the first fetch stays in
-	// flight while a second request arrives.
+	// flight while further requests arrive.
 	var enteredOnce sync.Once
 	entered := make(chan struct{})
 	release := make(chan struct{})
+	var fetches atomic.Int32
 	jwks := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		fetches.Add(1)
 		enteredOnce.Do(func() { close(entered) })
 		<-release
 		w.Header().Set("Content-Type", "application/json")
@@ -530,17 +532,131 @@ func TestJWKSFetchDoesNotBlockAuthentications(t *testing.T) {
 		t.Fatal("first JWKS fetch did not reach the server")
 	}
 
-	// A concurrent request must be answered from the (empty) cache rather
-	// than blocking behind the in-flight fetch's lock.
+	// Requests arriving during the initial fetch face an empty cache. They
+	// must wait for the in-flight fetch rather than fail with "unknown key
+	// id" — otherwise the first concurrent requests after startup are
+	// rejected spuriously.
+	type result struct {
+		kid string
+		err error
+	}
+	results := make(chan result, 2)
+	go func() {
+		_, err := authenticate(t, p, signRS256(t, key, "key-1", validClaims()))
+		results <- result{"key-1", err}
+	}()
+	go func() {
+		_, err := authenticate(t, p, signRS256(t, key, "key-2", validClaims()))
+		results <- result{"key-2", err}
+	}()
+
+	select {
+	case r := <-results:
+		t.Fatalf("request with unknown kid %q returned before the in-flight fetch completed: %v", r.kid, r.err)
+	case <-time.After(100 * time.Millisecond):
+	}
+
+	// Release the fetch; the waiters resolve from the refreshed cache.
+	releaseOnce.Do(func() { close(release) })
+	if err := <-first; err != nil {
+		t.Fatalf("first Authenticate: %v", err)
+	}
+	seen := map[string]error{}
+	for i := 0; i < 2; i++ {
+		select {
+		case r := <-results:
+			seen[r.kid] = r.err
+		case <-time.After(5 * time.Second):
+			t.Fatal("waiter did not return after the fetch completed")
+		}
+	}
+	if seen["key-1"] != nil {
+		t.Errorf("Authenticate with fetched kid: %v", seen["key-1"])
+	}
+	if seen["key-2"] == nil {
+		t.Error("Authenticate with genuinely unknown kid succeeded, want error")
+	}
+	if got := fetches.Load(); got != 1 {
+		t.Fatalf("JWKS fetches = %d, want 1 (waiters must not trigger refetches)", got)
+	}
+}
+
+func TestJWKSFetchDoesNotBlockCachedAuthentications(t *testing.T) {
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("generating key: %v", err)
+	}
+
+	// JWKS server that serves immediately until told to block, so a stale
+	// refetch stays in flight while further requests arrive.
+	var block atomic.Bool
+	var enteredOnce sync.Once
+	entered := make(chan struct{})
+	release := make(chan struct{})
+	jwks := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		if block.Load() {
+			enteredOnce.Do(func() { close(entered) })
+			<-release
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(map[string]any{"keys": []map[string]any{rsaJWK("key-1", &key.PublicKey)}}); err != nil {
+			t.Errorf("encoding JWKS: %v", err)
+		}
+	}))
+	var releaseOnce sync.Once
+	defer func() {
+		// Unblock the handler before closing the server so Close returns
+		// promptly, including on failure paths.
+		releaseOnce.Do(func() { close(release) })
+		jwks.Close()
+	}()
+
+	now := time.Now()
+	p, err := NewJWTProvider(JWTConfig{
+		Header:     "Cf-Access-Jwt-Assertion",
+		Issuer:     testIssuer,
+		Audience:   testAudience,
+		Algorithm:  AlgRS256,
+		JWKSURL:    jwks.URL,
+		HTTPClient: &http.Client{Timeout: 30 * time.Second},
+		Now:        func() time.Time { return now },
+	})
+	if err != nil {
+		t.Fatalf("NewJWTProvider: %v", err)
+	}
+	token := signRS256(t, key, "key-1", validClaims())
+
+	// Populate the cache, then let the entry go stale so the next request
+	// triggers a refetch.
+	if _, err := authenticate(t, p, token); err != nil {
+		t.Fatalf("Authenticate: %v", err)
+	}
+	now = now.Add(jwksTTL + time.Second)
+	block.Store(true)
+
+	// The refetch claims the fetch slot and blocks inside the fetch.
+	first := make(chan error, 1)
+	go func() {
+		_, err := authenticate(t, p, token)
+		first <- err
+	}()
+	select {
+	case <-entered:
+	case <-time.After(5 * time.Second):
+		t.Fatal("stale refetch did not reach the server")
+	}
+
+	// A concurrent request for a cached kid must be answered from the stale
+	// cache rather than blocking behind the in-flight refetch.
 	start := time.Now()
-	if _, err := authenticate(t, p, signRS256(t, key, "key-2", validClaims())); err == nil {
-		t.Fatal("Authenticate succeeded with unknown kid, want error")
+	if _, err := authenticate(t, p, token); err != nil {
+		t.Fatalf("Authenticate from stale cache: %v", err)
 	}
 	if elapsed := time.Since(start); elapsed > 2*time.Second {
 		t.Fatalf("concurrent authentication blocked behind in-flight JWKS fetch: %v", elapsed)
 	}
 
-	// Release the first fetch; it must complete and authenticate.
+	// Release the refetch; it must complete and authenticate.
 	releaseOnce.Do(func() { close(release) })
 	if err := <-first; err != nil {
 		t.Fatalf("first Authenticate: %v", err)
