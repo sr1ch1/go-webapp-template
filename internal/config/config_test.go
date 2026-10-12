@@ -241,6 +241,116 @@ func TestLoadLocalProviderMissingSettings(t *testing.T) {
 	}
 }
 
+func TestLoadPomeriumProvider(t *testing.T) {
+	t.Setenv("APP_AUTH_PROVIDER", "pomerium")
+	t.Setenv("APP_AUTH_POMERIUM_JWKS_URL", "https://app.example.com/.well-known/pomerium/jwks.json")
+	t.Setenv("APP_AUTH_POMERIUM_ISSUER", "app.example.com")
+	t.Setenv("APP_AUTH_POMERIUM_AUDIENCE", "app.example.com")
+	t.Setenv("APP_AUTH_POMERIUM_HEADER", "X-Test-Auth")
+	t.Setenv("APP_AUTH_POMERIUM_ALGORITHM", "RS256")
+	t.Setenv("APP_AUTH_POMERIUM_ROLE_PREFIX", "/")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.Auth.Provider != "pomerium" {
+		t.Errorf("Auth.Provider = %q, want pomerium", cfg.Auth.Provider)
+	}
+	if cfg.Auth.Pomerium.JWKSURL != "https://app.example.com/.well-known/pomerium/jwks.json" {
+		t.Errorf("Auth.Pomerium.JWKSURL = %q, want https://app.example.com/.well-known/pomerium/jwks.json", cfg.Auth.Pomerium.JWKSURL)
+	}
+	if cfg.Auth.Pomerium.Issuer != "app.example.com" {
+		t.Errorf("Auth.Pomerium.Issuer = %q, want app.example.com", cfg.Auth.Pomerium.Issuer)
+	}
+	if cfg.Auth.Pomerium.Audience != "app.example.com" {
+		t.Errorf("Auth.Pomerium.Audience = %q, want app.example.com", cfg.Auth.Pomerium.Audience)
+	}
+	if cfg.Auth.Pomerium.Header != "X-Test-Auth" {
+		t.Errorf("Auth.Pomerium.Header = %q, want X-Test-Auth", cfg.Auth.Pomerium.Header)
+	}
+	if cfg.Auth.Pomerium.Algorithm != "RS256" {
+		t.Errorf("Auth.Pomerium.Algorithm = %q, want RS256", cfg.Auth.Pomerium.Algorithm)
+	}
+	if cfg.Auth.Pomerium.RolePrefix != "/" {
+		t.Errorf("Auth.Pomerium.RolePrefix = %q, want /", cfg.Auth.Pomerium.RolePrefix)
+	}
+}
+
+func TestLoadPomeriumProviderDefaults(t *testing.T) {
+	t.Setenv("APP_AUTH_PROVIDER", "pomerium")
+	t.Setenv("APP_AUTH_POMERIUM_JWKS_URL", "https://app.example.com/.well-known/pomerium/jwks.json")
+	t.Setenv("APP_AUTH_POMERIUM_ISSUER", "app.example.com")
+	t.Setenv("APP_AUTH_POMERIUM_AUDIENCE", "app.example.com")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.Auth.Pomerium.Header != "X-Pomerium-Jwt-Assertion" {
+		t.Errorf("Auth.Pomerium.Header default = %q, want X-Pomerium-Jwt-Assertion", cfg.Auth.Pomerium.Header)
+	}
+	if cfg.Auth.Pomerium.Algorithm != "ES256" {
+		t.Errorf("Auth.Pomerium.Algorithm default = %q, want ES256", cfg.Auth.Pomerium.Algorithm)
+	}
+	if cfg.Auth.Pomerium.RolePrefix != "" {
+		t.Errorf("Auth.Pomerium.RolePrefix default = %q, want empty", cfg.Auth.Pomerium.RolePrefix)
+	}
+}
+
+func TestLoadPomeriumProviderMissingSettings(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		jwksURL  string
+		issuer   string
+		audience string
+		want     string
+	}{
+		{
+			name:     "missing JWKS URL",
+			issuer:   "app.example.com",
+			audience: "app.example.com",
+			want:     "APP_AUTH_POMERIUM_JWKS_URL",
+		},
+		{
+			name:     "missing issuer",
+			jwksURL:  "https://app.example.com/.well-known/pomerium/jwks.json",
+			audience: "app.example.com",
+			want:     "APP_AUTH_POMERIUM_ISSUER",
+		},
+		{
+			name:    "missing audience",
+			jwksURL: "https://app.example.com/.well-known/pomerium/jwks.json",
+			issuer:  "app.example.com",
+			want:    "APP_AUTH_POMERIUM_AUDIENCE",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("APP_AUTH_PROVIDER", "pomerium")
+			t.Setenv("APP_AUTH_POMERIUM_JWKS_URL", "")
+			t.Setenv("APP_AUTH_POMERIUM_ISSUER", "")
+			t.Setenv("APP_AUTH_POMERIUM_AUDIENCE", "")
+			if tc.jwksURL != "" {
+				t.Setenv("APP_AUTH_POMERIUM_JWKS_URL", tc.jwksURL)
+			}
+			if tc.issuer != "" {
+				t.Setenv("APP_AUTH_POMERIUM_ISSUER", tc.issuer)
+			}
+			if tc.audience != "" {
+				t.Setenv("APP_AUTH_POMERIUM_AUDIENCE", tc.audience)
+			}
+
+			_, err := Load()
+			if err == nil {
+				t.Fatal("Load succeeded, want error")
+			}
+			if !strings.Contains(err.Error(), tc.want) {
+				t.Errorf("error = %q, want mention of %q", err.Error(), tc.want)
+			}
+		})
+	}
+}
+
 func TestLoadInvalidDuration(t *testing.T) {
 	t.Setenv("APP_AUTH_CLOUDFLARE_TEAM_DOMAIN", "example")
 	t.Setenv("APP_AUTH_CLOUDFLARE_AUDIENCE", "aud")

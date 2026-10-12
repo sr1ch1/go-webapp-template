@@ -61,6 +61,22 @@ type Settings struct {
 	LocalHeader string
 	// LocalAlgorithm is used by the local provider; defaults to RS256.
 	LocalAlgorithm string
+	// PomeriumJWKSURL is used by the pomerium provider; required.
+	PomeriumJWKSURL string
+	// PomeriumIssuer is used by the pomerium provider; required. Pomerium
+	// sets the JWT's iss claim to the route's "from" host (no scheme).
+	PomeriumIssuer string
+	// PomeriumAudience is used by the pomerium provider; required. Pomerium
+	// sets the JWT's aud claim to the route's "from" host as well.
+	PomeriumAudience string
+	// PomeriumHeader is used by the pomerium provider; defaults to
+	// X-Pomerium-Jwt-Assertion.
+	PomeriumHeader string
+	// PomeriumAlgorithm is used by the pomerium provider; defaults to ES256.
+	PomeriumAlgorithm string
+	// PomeriumRolePrefix is used by the pomerium provider to strip a prefix
+	// from the upstream IdP's group names; empty disables stripping.
+	PomeriumRolePrefix string
 	// HTTPClient is used for outbound JWKS fetches. When nil, the provider
 	// uses a bounded stdlib client with a 10-second timeout.
 	HTTPClient *http.Client

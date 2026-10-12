@@ -67,6 +67,12 @@ fast at startup when a required value is missing or malformed.
 | `APP_AUTH_PROVIDER` | `cloudflare-access` | optional | Provider registry key |
 | `APP_AUTH_CLOUDFLARE_TEAM_DOMAIN` | — | with cloudflare-access | Team domain (`<team>.cloudflareaccess.com`) |
 | `APP_AUTH_CLOUDFLARE_AUDIENCE` | — | with cloudflare-access | Access application AUD tag |
+| `APP_AUTH_POMERIUM_JWKS_URL` | — | with pomerium | Pomerium JWKS endpoint (`https://<route-host>/.well-known/pomerium/jwks.json`) |
+| `APP_AUTH_POMERIUM_ISSUER` | — | with pomerium | Route host Pomerium puts in the `iss` claim (no scheme) |
+| `APP_AUTH_POMERIUM_AUDIENCE` | — | with pomerium | Route host Pomerium puts in the `aud` claim (same as issuer) |
+| `APP_AUTH_POMERIUM_HEADER` | `X-Pomerium-Jwt-Assertion` | optional | Request header carrying the Pomerium JWT |
+| `APP_AUTH_POMERIUM_ALGORITHM` | `ES256` | optional | Pinned algorithm (`ES256` or `RS256`) |
+| `APP_AUTH_POMERIUM_ROLE_PREFIX` | — | optional | Prefix stripped from `groups` values (e.g. `/` for Keycloak group paths) |
 | `APP_DATABASE_PATH` | `app.db` | optional | SQLite file path |
 | `APP_LOG_LEVEL` | `info` | optional | slog level (debug/info/warn/error) |
 
@@ -178,6 +184,37 @@ go run ./cmd/app
 Optional: `APP_AUTH_LOCAL_HEADER` (default `Cf-Access-Jwt-Assertion`) and
 `APP_AUTH_LOCAL_ALGORITHM` (default `RS256`).
 
+## Pomerium
+
+[Pomerium](https://www.pomerium.com) is a self-hosted identity-aware proxy
+that fronts an upstream OIDC Identity Provider (Keycloak, Entra ID, ...):
+it owns the browser login and reissues its own short-lived JWT for the
+upstream application; the upstream IdP's token never reaches the app. User
+management, passwords, and group assignment live in the IdP, not in the app.
+
+Run Pomerium (and the IdP) in containers, add a route for the app with
+`pass_identity_headers: true` and a `signing_key`, and select the provider:
+
+```sh
+APP_AUTH_PROVIDER=pomerium \
+APP_AUTH_POMERIUM_JWKS_URL=https://app.example.com/.well-known/pomerium/jwks.json \
+APP_AUTH_POMERIUM_ISSUER=app.example.com \
+APP_AUTH_POMERIUM_AUDIENCE=app.example.com \
+go run ./cmd/app
+```
+
+`iss` and `aud` default to the route's `from` host without the scheme; set
+`jwt_issuer_format: uri` on the route (Pomerium ≥ 0.28) if you prefer the
+full URL as the issuer. The default algorithm is `ES256` (Pomerium's signing
+key algorithm); `RS256` is supported if you pin it explicitly.
+
+Roles come from the `groups` claim asserted by the upstream Identity
+Provider. When the IdP names groups as paths (Keycloak's default), set
+`APP_AUTH_POMERIUM_ROLE_PREFIX=/` so `/admins` maps to the `admin` role for
+`auth.RequireRole`; otherwise leave it unset and map naming in `RoleMapper`.
+Network policy must ensure the app is reachable only through Pomerium — the
+verified JWT is the defense, and a reachable bypass path defeats it.
+
 ## Browser end-to-end tests
 
 End-to-end tests live in `e2e/` and use Playwright. Install dependencies and
@@ -251,6 +288,9 @@ APP_AUTH_CLOUDFLARE_TEAM_DOMAIN=yourteam
 APP_AUTH_CLOUDFLARE_AUDIENCE=your-aud-tag
 APP_LOG_LEVEL=info
 ```
+
+Behind Pomerium instead? See the Pomerium section above for the
+`APP_AUTH_POMERIUM_*` variables.
 
 ```sh
 docker compose up --build

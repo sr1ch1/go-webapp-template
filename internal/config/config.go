@@ -33,6 +33,18 @@ type AuthConfig struct {
 	Provider   string
 	Cloudflare CloudflareConfig
 	Local      LocalConfig
+	Pomerium   PomeriumConfig
+}
+
+// PomeriumConfig holds the settings for the pomerium provider (an
+// identity-aware proxy fronting an upstream OIDC Identity Provider).
+type PomeriumConfig struct {
+	JWKSURL    string
+	Issuer     string
+	Audience   string
+	Header     string
+	Algorithm  string
+	RolePrefix string
 }
 
 // CloudflareConfig holds the settings for the cloudflare-access provider.
@@ -71,6 +83,14 @@ func Load() (Config, error) {
 				JWKSURL:   os.Getenv("APP_AUTH_LOCAL_JWKS_URL"),
 				Header:    envString("APP_AUTH_LOCAL_HEADER", "Cf-Access-Jwt-Assertion"),
 				Algorithm: envString("APP_AUTH_LOCAL_ALGORITHM", "RS256"),
+			},
+			Pomerium: PomeriumConfig{
+				JWKSURL:    os.Getenv("APP_AUTH_POMERIUM_JWKS_URL"),
+				Issuer:     os.Getenv("APP_AUTH_POMERIUM_ISSUER"),
+				Audience:   os.Getenv("APP_AUTH_POMERIUM_AUDIENCE"),
+				Header:     envString("APP_AUTH_POMERIUM_HEADER", "X-Pomerium-Jwt-Assertion"),
+				Algorithm:  envString("APP_AUTH_POMERIUM_ALGORITHM", "ES256"),
+				RolePrefix: os.Getenv("APP_AUTH_POMERIUM_ROLE_PREFIX"),
 			},
 		},
 		DatabasePath: envString("APP_DATABASE_PATH", "app.db"),
@@ -119,6 +139,18 @@ func Load() (Config, error) {
 		}
 		if cfg.Auth.Local.JWKSURL == "" {
 			problems = append(problems, "APP_AUTH_LOCAL_JWKS_URL is required when APP_AUTH_PROVIDER=local")
+		}
+	}
+
+	if cfg.Auth.Provider == "pomerium" {
+		if cfg.Auth.Pomerium.JWKSURL == "" {
+			problems = append(problems, "APP_AUTH_POMERIUM_JWKS_URL is required when APP_AUTH_PROVIDER=pomerium")
+		}
+		if cfg.Auth.Pomerium.Issuer == "" {
+			problems = append(problems, "APP_AUTH_POMERIUM_ISSUER is required when APP_AUTH_PROVIDER=pomerium")
+		}
+		if cfg.Auth.Pomerium.Audience == "" {
+			problems = append(problems, "APP_AUTH_POMERIUM_AUDIENCE is required when APP_AUTH_PROVIDER=pomerium")
 		}
 	}
 

@@ -57,13 +57,19 @@ func run() (err error) {
 	}()
 
 	settings := auth.Settings{
-		TeamDomain:     cfg.Auth.Cloudflare.TeamDomain,
-		Audience:       cfg.Auth.Cloudflare.Audience,
-		LocalIssuer:    cfg.Auth.Local.Issuer,
-		LocalAudience:  cfg.Auth.Local.Audience,
-		JWKSURL:        cfg.Auth.Local.JWKSURL,
-		LocalHeader:    cfg.Auth.Local.Header,
-		LocalAlgorithm: cfg.Auth.Local.Algorithm,
+		TeamDomain:         cfg.Auth.Cloudflare.TeamDomain,
+		Audience:           cfg.Auth.Cloudflare.Audience,
+		LocalIssuer:        cfg.Auth.Local.Issuer,
+		LocalAudience:      cfg.Auth.Local.Audience,
+		JWKSURL:            cfg.Auth.Local.JWKSURL,
+		LocalHeader:        cfg.Auth.Local.Header,
+		LocalAlgorithm:     cfg.Auth.Local.Algorithm,
+		PomeriumJWKSURL:    cfg.Auth.Pomerium.JWKSURL,
+		PomeriumIssuer:     cfg.Auth.Pomerium.Issuer,
+		PomeriumAudience:   cfg.Auth.Pomerium.Audience,
+		PomeriumHeader:     cfg.Auth.Pomerium.Header,
+		PomeriumAlgorithm:  cfg.Auth.Pomerium.Algorithm,
+		PomeriumRolePrefix: cfg.Auth.Pomerium.RolePrefix,
 	}
 	provider, err := auth.NewProvider(cfg.Auth.Provider, settings)
 	if err != nil {
